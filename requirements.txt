@@ -1,0 +1,28 @@
+flask==3.0.0
+cloudinary==1.36.0
+gunicorn==21.2.0
+```
+
+3. **Save the file**
+
+## Step 2.4: Create File #3 - `Procfile`
+
+1. Create a new file called **`Procfile`** (NO file extension, just "Procfile")
+2. Copy and paste this single line:
+```
+web: gunicorn app:app
+```
+
+3. **Save the file**
+
+## Step 2.5: Create File #4 - `.gitignore`
+
+1. Create a new file called **`.gitignore`** (starts with a dot)
+2. Copy and paste this:
+```
+*.pyc
+__pycache__/
+tracks.json
+.env
+venv/
+*.log

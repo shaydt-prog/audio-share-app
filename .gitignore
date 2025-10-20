@@ -1,0 +1,6 @@
+   *.pyc
+   __pycache__/
+   tracks.json
+   .env
+   venv/
+   *.log
