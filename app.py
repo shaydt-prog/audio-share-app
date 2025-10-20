@@ -10,14 +10,14 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
-# Configure Cloudinary
+# Configure Cloudinary (you'll add your credentials here)
 cloudinary.config(
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', 'your_cloud_name'),
     api_key = os.environ.get('CLOUDINARY_API_KEY', 'your_api_key'),
     api_secret = os.environ.get('CLOUDINARY_API_SECRET', 'your_api_secret')
 )
 
-# Simple file-based database
+# Simple file-based database (for deployment, use a real database)
 TRACKS_FILE = 'tracks.json'
 
 def load_tracks():
@@ -326,7 +326,7 @@ HOME_TEMPLATE = '''
                 const fileSizeMB = file.size / (1024 * 1024);
                 
                 if (fileSizeMB > 100) {
-                    alert('❌ File too large! Maximum file size is 100 MB.\\nYour file: ' + fileSizeMB.toFixed(2) + ' MB');
+                    alert('❌ File too large! Maximum file size is 100 MB.\nYour file: ' + fileSizeMB.toFixed(2) + ' MB');
                     e.target.value = '';
                     selectedFile.style.display = 'none';
                     return;
