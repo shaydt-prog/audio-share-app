@@ -1,4 +1,58 @@
-from flask import Flask, render_template_string, request, redirect, url_for, jsonify
+LISTEN_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ track.title }} - Listen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #fff;
+        }
+        .player-container {
+            background: rgba(30, 30, 40, 0.95);
+            border-radius: 30px;
+            padding: 50px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 30px 100px rgba(0,0,0,0.6);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .cover {
+            width: 320px;
+            height: 320px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 24px;
+            margin: 0 auto 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8rem;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+        }
+        h1 {
+            font-size: 2.5from flask import Flask, render_template_string, request, redirect, url_for, jsonify, send_file
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -10,12 +64,14 @@ from datetime import datetime
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 
+# Configure Cloudinary (you'll add your credentials here)
 cloudinary.config(
     cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME', 'your_cloud_name'),
     api_key = os.environ.get('CLOUDINARY_API_KEY', 'your_api_key'),
     api_secret = os.environ.get('CLOUDINARY_API_SECRET', 'your_api_secret')
 )
 
+# Simple file-based database (for deployment, use a real database)
 TRACKS_FILE = 'tracks.json'
 
 def load_tracks():
@@ -34,16 +90,17 @@ def increment_stat(secret_id, stat_type):
         tracks[secret_id][stat_type] = tracks[secret_id].get(stat_type, 0) + 1
         save_tracks(tracks)
 
-HOME_TEMPLATE = """
+# HTML Templates
+HOME_TEMPLATE = '''
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Audio Upload and Share</title>
+    <title>Audio Upload & Share</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -74,6 +131,11 @@ HOME_TEMPLATE = """
             text-align: center;
             background: #f8f9ff;
             margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
         }
         .upload-icon {
             font-size: 4rem;
@@ -91,6 +153,10 @@ HOME_TEMPLATE = """
             cursor: pointer;
             font-weight: bold;
             font-size: 1.1rem;
+            transition: transform 0.2s;
+        }
+        .file-label:hover {
+            transform: scale(1.05);
         }
         .form-group {
             margin-bottom: 20px;
@@ -107,6 +173,11 @@ HOME_TEMPLATE = """
             border: 2px solid #ddd;
             border-radius: 10px;
             font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
         }
         .upload-btn {
             width: 100%;
@@ -118,6 +189,14 @@ HOME_TEMPLATE = """
             font-size: 1.2rem;
             font-weight: bold;
             cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .selected-file {
             margin-top: 15px;
@@ -126,7 +205,6 @@ HOME_TEMPLATE = """
             border-radius: 8px;
             color: #2e7d32;
             font-weight: bold;
-            display: none;
         }
         .stats {
             display: grid;
@@ -195,6 +273,9 @@ HOME_TEMPLATE = """
             cursor: pointer;
             font-weight: bold;
         }
+        .copy-btn:hover {
+            background: #45a049;
+        }
         .loading {
             display: none;
             text-align: center;
@@ -217,7 +298,7 @@ HOME_TEMPLATE = """
 </head>
 <body>
     <div class="container">
-        <h1>Audio Upload & Share</h1>
+        <h1>🎵 Audio Upload & Share</h1>
         <p class="subtitle">Upload audio files and get secret shareable links</p>
         
         <div class="stats">
@@ -240,9 +321,9 @@ HOME_TEMPLATE = """
                 <div class="upload-icon">🎧</div>
                 <label for="audioFile" class="file-label">Choose Audio File</label>
                 <input type="file" id="audioFile" name="audio" accept="audio/*" required>
-                <div id="selectedFile" class="selected-file"></div>
+                <div id="selectedFile" class="selected-file" style="display:none;"></div>
                 <p style="margin-top: 15px; color: #999; font-size: 0.9rem;">
-                    Max file size: 100 MB
+                    Max file size: 100 MB • Supported: MP3, WAV, M4A, etc.
                 </p>
             </div>
 
@@ -257,35 +338,35 @@ HOME_TEMPLATE = """
             </div>
 
             <button type="submit" class="upload-btn" id="uploadBtn">
-                Upload & Generate Secret Link
+                📤 Upload & Generate Secret Link
             </button>
         </form>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p style="margin-top: 15px; color: #667eea; font-weight: bold;">Uploading...</p>
+            <p style="margin-top: 15px; color: #667eea; font-weight: bold;">Uploading to Cloudinary...</p>
         </div>
 
         <div class="my-tracks">
-            <h2 style="margin-bottom: 20px; color: #333;">My Uploaded Tracks</h2>
+            <h2 style="margin-bottom: 20px; color: #333;">📚 My Uploaded Tracks</h2>
             {% if tracks %}
                 {% for secret_id, track in tracks.items() %}
                 <div class="track-item">
                     <div class="track-title">{{ track.title }}</div>
                     <div class="track-artist">{{ track.artist or 'Unknown Artist' }}</div>
                     <div class="track-stats">
-                        <span>{{ track.plays or 0 }} plays</span>
-                        <span>{{ track.downloads or 0 }} downloads</span>
-                        <span>{{ track.uploaded_at }}</span>
+                        <span>▶️ {{ track.plays or 0 }} plays</span>
+                        <span>⬇️ {{ track.downloads or 0 }} downloads</span>
+                        <span>📅 {{ track.uploaded_at }}</span>
                     </div>
                     <div class="secret-link">{{ request.url_root }}listen/{{ secret_id }}</div>
                     <button class="copy-btn" onclick="copyLink('{{ request.url_root }}listen/{{ secret_id }}')">
-                        Copy Link
+                        📋 Copy Link
                     </button>
                 </div>
                 {% endfor %}
             {% else %}
-                <p style="text-align: center; color: #999; padding: 40px;">No tracks uploaded yet.</p>
+                <p style="text-align: center; color: #999; padding: 40px;">No tracks uploaded yet. Upload your first track above! 🎵</p>
             {% endif %}
         </div>
     </div>
@@ -299,13 +380,13 @@ HOME_TEMPLATE = """
                 const fileSizeMB = file.size / (1024 * 1024);
                 
                 if (fileSizeMB > 100) {
-                    alert('File too large! Maximum is 100 MB. Your file: ' + fileSizeMB.toFixed(2) + ' MB');
+                    alert('❌ File too large! Maximum file size is 100 MB.\nYour file: ' + fileSizeMB.toFixed(2) + ' MB');
                     e.target.value = '';
                     selectedFile.style.display = 'none';
                     return;
                 }
                 
-                selectedFile.innerHTML = 'Selected: ' + file.name + ' (' + fileSizeMB.toFixed(2) + ' MB)';
+                selectedFile.innerHTML = '✓ Selected: ' + file.name + ' (' + fileSizeMB.toFixed(2) + ' MB)';
                 selectedFile.style.display = 'block';
             }
         });
@@ -343,16 +424,16 @@ HOME_TEMPLATE = """
         });
 
         function copyLink(link) {
-            navigator.clipboard.writeText(link).then(function() {
-                alert('Link copied!');
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Link copied to clipboard!');
             });
         }
     </script>
 </body>
 </html>
-"""
+'''
 
-LISTEN_TEMPLATE = """
+LISTEN_TEMPLATE = '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -361,7 +442,7 @@ LISTEN_TEMPLATE = """
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -402,6 +483,7 @@ LISTEN_TEMPLATE = """
         audio {
             width: 100%;
             margin-bottom: 20px;
+            border-radius: 10px;
         }
         .download-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -414,6 +496,10 @@ LISTEN_TEMPLATE = """
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
+            transition: transform 0.2s;
+        }
+        .download-btn:hover {
+            transform: scale(1.05);
         }
         .stats {
             margin-top: 30px;
@@ -421,6 +507,11 @@ LISTEN_TEMPLATE = """
             justify-content: center;
             gap: 30px;
             color: #666;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
     </style>
 </head>
@@ -432,15 +523,22 @@ LISTEN_TEMPLATE = """
         
         <audio controls autoplay id="audioPlayer">
             <source src="{{ track.audio_url }}" type="audio/mpeg">
+            Your browser does not support the audio element.
         </audio>
         
         <a href="{{ track.audio_url }}" download class="download-btn" onclick="incrementDownload()">
-            Download Track
+            ⬇️ Download Track
         </a>
         
         <div class="stats">
-            <span>{{ track.plays or 0 }} plays</span>
-            <span>{{ track.downloads or 0 }} downloads</span>
+            <div class="stat-item">
+                <span>▶️</span>
+                <span>{{ track.plays or 0 }} plays</span>
+            </div>
+            <div class="stat-item">
+                <span>⬇️</span>
+                <span>{{ track.downloads or 0 }} downloads</span>
+            </div>
         </div>
     </div>
 
@@ -455,7 +553,7 @@ LISTEN_TEMPLATE = """
     </script>
 </body>
 </html>
-"""
+'''
 
 @app.route('/')
 def home():
@@ -472,6 +570,7 @@ def home():
 @app.route('/upload', methods=['POST'])
 def upload():
     try:
+        # Check if file exists
         if 'audio' not in request.files:
             return jsonify({'success': False, 'error': 'No audio file provided'})
         
@@ -483,25 +582,32 @@ def upload():
         title = request.form.get('title', 'Untitled')
         artist = request.form.get('artist', '')
         
-        audio_file.seek(0, 2)
-        file_size = audio_file.tell()
-        audio_file.seek(0)
+        # Check file size (100 MB limit for Cloudinary free plan)
+        audio_file.seek(0, 2)  # Seek to end
+        file_size = audio_file.tell()  # Get file size
+        audio_file.seek(0)  # Reset to beginning
         
-        if file_size > 100 * 1024 * 1024:
+        if file_size > 100 * 1024 * 1024:  # 100 MB in bytes
             return jsonify({'success': False, 'error': 'File too large. Maximum size is 100 MB.'})
         
+        # Check Cloudinary credentials
         if not cloudinary.config().cloud_name or cloudinary.config().cloud_name == 'your_cloud_name':
-            return jsonify({'success': False, 'error': 'Cloudinary not configured.'})
+            return jsonify({'success': False, 'error': 'Cloudinary not configured. Please check environment variables.'})
         
+        # Upload to Cloudinary
+        print(f"Uploading file: {audio_file.filename}, size: {file_size} bytes")
         result = cloudinary.uploader.upload(
             audio_file,
-            resource_type="video",
+            resource_type="video",  # Cloudinary uses 'video' for audio files
             folder="audio_tracks",
-            chunk_size=6000000
+            chunk_size=6000000  # 6MB chunks for large files
         )
+        print(f"Upload successful: {result['secure_url']}")
         
+        # Generate secret ID
         secret_id = secrets.token_urlsafe(16)
         
+        # Save track info
         tracks = load_tracks()
         tracks[secret_id] = {
             'title': title,
@@ -519,7 +625,9 @@ def upload():
     
     except Exception as e:
         print(f"Upload error: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Upload failed: {str(e)}'})
 
 @app.route('/listen/<secret_id>')
 def listen(secret_id):
