@@ -516,7 +516,15 @@ def home():
 @app.route('/upload', methods=['POST'])
 def upload():
     try:
+        # Check if file exists
+        if 'audio' not in request.files:
+            return jsonify({'success': False, 'error': 'No audio file provided'})
+        
         audio_file = request.files['audio']
+        
+        if audio_file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'})
+        
         title = request.form.get('title', 'Untitled')
         artist = request.form.get('artist', '')
         
@@ -528,13 +536,19 @@ def upload():
         if file_size > 100 * 1024 * 1024:  # 100 MB in bytes
             return jsonify({'success': False, 'error': 'File too large. Maximum size is 100 MB.'})
         
+        # Check Cloudinary credentials
+        if not cloudinary.config().cloud_name or cloudinary.config().cloud_name == 'your_cloud_name':
+            return jsonify({'success': False, 'error': 'Cloudinary not configured. Please check environment variables.'})
+        
         # Upload to Cloudinary
+        print(f"Uploading file: {audio_file.filename}, size: {file_size} bytes")
         result = cloudinary.uploader.upload(
             audio_file,
             resource_type="video",  # Cloudinary uses 'video' for audio files
             folder="audio_tracks",
             chunk_size=6000000  # 6MB chunks for large files
         )
+        print(f"Upload successful: {result['secure_url']}")
         
         # Generate secret ID
         secret_id = secrets.token_urlsafe(16)
@@ -556,7 +570,10 @@ def upload():
         return jsonify({'success': True, 'secret_id': secret_id})
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Upload error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Upload failed: {str(e)}'})
 
 @app.route('/listen/<secret_id>')
 def listen(secret_id):
